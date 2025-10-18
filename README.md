@@ -13,6 +13,45 @@ Our method outperforms strong baselines on both Paper2Code and PaperBench and pr
 ## 🗺️ Table of Contents
 
 - [⚡ Quick Start](#-quick-start)
+- [🌐 Web-Based Chatbot Interface (NEW!)](#-web-based-chatbot-interface-new)
+- [📚 Detailed Setup Instructions](#-detailed-setup-instructions)
+- [📦 Paper2Code Benchmark Datasets](#-paper2code-benchmark-datasets)
+- [📊 Model-based Evaluation of Repositories](#-model-based-evaluation-of-repositories-generated-by-papercoder)
+
+---
+
+## 🌐 Web-Based Chatbot Interface (NEW!)
+
+We've added a web-based chatbot application that makes it easy to use Paper2Code! Upload a paper, generate code, and download the complete repository.
+
+### Features
+- 📤 Upload research papers (JSON format)
+- 🤖 AI-powered code generation using Azure OpenAI
+- 📦 Download generated code as ZIP files
+- 💬 Interactive web interface
+
+### Quick Start with Chatbot
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure Azure OpenAI (required)
+export AZURE_OPENAI_API_KEY="your-api-key"
+export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
+export AZURE_OPENAI_DEPLOYMENT="your-deployment-name"
+
+# Run the chatbot
+streamlit run chatbot_app.py
+```
+
+For detailed instructions, see [CHATBOT_README.md](CHATBOT_README.md)
+
+---
+
+## 🗺️ Table of Contents
+
+- [⚡ Quick Start](#-quick-start)
 - [📚 Detailed Setup Instructions](#-detailed-setup-instructions)
 - [📦 Paper2Code Benchmark Datasets](#-paper2code-benchmark-datasets)
 - [📊 Model-based Evaluation of Repositories](#-model-based-evaluation-of-repositories-generated-by-papercoder)
@@ -22,7 +61,21 @@ Our method outperforms strong baselines on both Paper2Code and PaperBench and pr
 ## ⚡ Quick Start
 - Note: The following command runs example paper ([Attention Is All You Need](https://arxiv.org/abs/1706.03762)).  
 
-### Using OpenAI API
+### Using Azure OpenAI API (Chatbot Interface)
+- 🌐 Web-based interface with file upload and download
+- 💵 Estimated cost: $0.50–$2.00 depending on model
+
+```bash
+pip install -r requirements.txt
+
+export AZURE_OPENAI_API_KEY="<AZURE_OPENAI_API_KEY>"
+export AZURE_OPENAI_ENDPOINT="<AZURE_OPENAI_ENDPOINT>"
+export AZURE_OPENAI_DEPLOYMENT="<AZURE_OPENAI_DEPLOYMENT>"
+
+streamlit run chatbot_app.py
+```
+
+### Using OpenAI API (Command Line)
 - 💵 Estimated cost for using o3-mini: $0.50–$0.70
 
 ```bash
