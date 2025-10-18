@@ -82,9 +82,62 @@ def process_pdf_to_json(pdf_path, output_json_path):
     return None
 
 
+def validate_paper_name(paper_name):
+    """
+    Validate paper name to prevent path traversal and command injection.
+    Only allows alphanumeric characters, hyphens, and underscores.
+    
+    Security: This function mitigates path injection and command injection vulnerabilities
+    by restricting the character set to safe alphanumeric characters only.
+    """
+    import re
+    if not paper_name:
+        return False
+    # Only allow alphanumeric, hyphens, and underscores (maximum 100 characters)
+    if not re.match(r'^[a-zA-Z0-9_-]{1,100}$', paper_name):
+        return False
+    # Prevent path traversal
+    if '..' in paper_name or '/' in paper_name or '\\' in paper_name:
+        return False
+    return True
+
+
+def sanitize_path(path):
+    """
+    Sanitize file paths to prevent path traversal.
+    Ensures path is within expected directories.
+    
+    Security: This function mitigates path injection by ensuring all paths
+    are absolute and within the application's controlled directories.
+    """
+    # Resolve to absolute path and normalize
+    abs_path = os.path.abspath(path)
+    base_dir = os.path.abspath(os.path.dirname(__file__))
+    outputs_dir = os.path.join(base_dir, 'outputs')
+    
+    # Ensure the path is within the application directory or outputs
+    if not (abs_path.startswith(base_dir) or abs_path.startswith(outputs_dir)):
+        raise ValueError("Invalid path: potential path traversal detected")
+    
+    return abs_path
+
+
 def run_planning_stage(paper_name, pdf_json_path, output_dir, gpt_version="gpt-4"):
     """Run the planning stage of Paper2Code."""
     import subprocess
+    
+    # Validate inputs to prevent command injection
+    if not validate_paper_name(paper_name):
+        raise ValueError("Invalid paper name. Use only alphanumeric characters, hyphens, and underscores.")
+    
+    # Sanitize paths
+    pdf_json_path = sanitize_path(pdf_json_path)
+    output_dir = sanitize_path(output_dir)
+    
+    # Validate gpt_version is from expected set
+    allowed_models = ['gpt-4', 'gpt-4-turbo', 'gpt-35-turbo', 'gpt-4o', 'gpt-4o-mini']
+    if gpt_version not in allowed_models:
+        raise ValueError(f"Invalid model version. Allowed: {', '.join(allowed_models)}")
     
     cmd = [
         sys.executable,
@@ -102,6 +155,19 @@ def run_planning_stage(paper_name, pdf_json_path, output_dir, gpt_version="gpt-4
 def run_analysis_stage(paper_name, pdf_json_path, output_dir, gpt_version="gpt-4"):
     """Run the analysis stage of Paper2Code."""
     import subprocess
+    
+    # Validate inputs
+    if not validate_paper_name(paper_name):
+        raise ValueError("Invalid paper name. Use only alphanumeric characters, hyphens, and underscores.")
+    
+    # Sanitize paths
+    pdf_json_path = sanitize_path(pdf_json_path)
+    output_dir = sanitize_path(output_dir)
+    
+    # Validate model version
+    allowed_models = ['gpt-4', 'gpt-4-turbo', 'gpt-35-turbo', 'gpt-4o', 'gpt-4o-mini']
+    if gpt_version not in allowed_models:
+        raise ValueError(f"Invalid model version. Allowed: {', '.join(allowed_models)}")
     
     # First extract config
     cmd = [
@@ -129,6 +195,20 @@ def run_analysis_stage(paper_name, pdf_json_path, output_dir, gpt_version="gpt-4
 def run_coding_stage(paper_name, pdf_json_path, output_dir, output_repo_dir, gpt_version="gpt-4"):
     """Run the coding stage of Paper2Code."""
     import subprocess
+    
+    # Validate inputs
+    if not validate_paper_name(paper_name):
+        raise ValueError("Invalid paper name. Use only alphanumeric characters, hyphens, and underscores.")
+    
+    # Sanitize paths
+    pdf_json_path = sanitize_path(pdf_json_path)
+    output_dir = sanitize_path(output_dir)
+    output_repo_dir = sanitize_path(output_repo_dir)
+    
+    # Validate model version
+    allowed_models = ['gpt-4', 'gpt-4-turbo', 'gpt-35-turbo', 'gpt-4o', 'gpt-4o-mini']
+    if gpt_version not in allowed_models:
+        raise ValueError(f"Invalid model version. Allowed: {', '.join(allowed_models)}")
     
     cmd = [
         sys.executable,
@@ -217,30 +297,32 @@ def main():
             if st.button("🚀 Generate Code", type="primary", use_container_width=True):
                 if not paper_name:
                     st.error("Please provide a paper name")
+                elif not validate_paper_name(paper_name):
+                    st.error("Invalid paper name. Use only alphanumeric characters, hyphens, and underscores (no spaces or special characters).")
                 else:
-                    # Create temporary directories
-                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    base_output_dir = os.path.join("outputs", f"{paper_name}_{timestamp}")
-                    output_dir = os.path.join(base_output_dir, "artifacts")
-                    output_repo_dir = os.path.join(base_output_dir, "repo")
-                    
-                    os.makedirs(output_dir, exist_ok=True)
-                    os.makedirs(output_repo_dir, exist_ok=True)
-                    
-                    # Save uploaded file
-                    pdf_json_path = os.path.join(output_dir, f"{paper_name}_input.json")
-                    with open(pdf_json_path, 'wb') as f:
-                        f.write(uploaded_file.getvalue())
-                    
-                    st.session_state.paper_name = paper_name
-                    st.session_state.output_dir = output_dir
-                    st.session_state.output_repo_dir = output_repo_dir
-                    
-                    # Processing stages
-                    progress_bar = st.progress(0)
-                    status_text = st.empty()
-                    
                     try:
+                        # Create temporary directories
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        base_output_dir = os.path.join("outputs", f"{paper_name}_{timestamp}")
+                        output_dir = os.path.join(base_output_dir, "artifacts")
+                        output_repo_dir = os.path.join(base_output_dir, "repo")
+                        
+                        os.makedirs(output_dir, exist_ok=True)
+                        os.makedirs(output_repo_dir, exist_ok=True)
+                        
+                        # Save uploaded file
+                        pdf_json_path = os.path.join(output_dir, f"{paper_name}_input.json")
+                        with open(pdf_json_path, 'wb') as f:
+                            f.write(uploaded_file.getvalue())
+                        
+                        st.session_state.paper_name = paper_name
+                        st.session_state.output_dir = output_dir
+                        st.session_state.output_repo_dir = output_repo_dir
+                        
+                        # Processing stages
+                        progress_bar = st.progress(0)
+                        status_text = st.empty()
+                        
                         # Stage 1: Planning
                         status_text.text("Stage 1/3: Planning...")
                         progress_bar.progress(0.1)
@@ -294,12 +376,13 @@ def main():
                         # Success message
                         st.success("🎉 Code generation complete!")
                         
-                        # Store generated files
+                        # Store generated files (validate output_repo_dir)
                         st.session_state.generated_files = []
-                        for root, dirs, files in os.walk(output_repo_dir):
+                        safe_repo_dir = sanitize_path(output_repo_dir)
+                        for root, dirs, files in os.walk(safe_repo_dir):
                             for file in files:
                                 file_path = os.path.join(root, file)
-                                rel_path = os.path.relpath(file_path, output_repo_dir)
+                                rel_path = os.path.relpath(file_path, safe_repo_dir)
                                 st.session_state.generated_files.append(rel_path)
                         
                     except Exception as e:
@@ -320,25 +403,35 @@ def main():
             
             # Create download button
             if st.session_state.output_repo_dir:
-                zip_path = os.path.join(
-                    st.session_state.output_dir,
-                    f"{st.session_state.paper_name}_code.zip"
-                )
-                
-                if st.button("📦 Prepare Download", use_container_width=True):
-                    with st.spinner("Creating zip file..."):
-                        create_zip_file(st.session_state.output_repo_dir, zip_path)
-                        st.success("Zip file created!")
-                
-                if os.path.exists(zip_path):
-                    with open(zip_path, 'rb') as f:
-                        st.download_button(
-                            label="⬇️ Download Code",
-                            data=f,
-                            file_name=f"{st.session_state.paper_name}_code.zip",
-                            mime="application/zip",
-                            use_container_width=True
+                # Validate paper name and paths
+                if not validate_paper_name(st.session_state.paper_name):
+                    st.error("Invalid paper name in session")
+                else:
+                    try:
+                        safe_output_dir = sanitize_path(st.session_state.output_dir)
+                        safe_repo_dir = sanitize_path(st.session_state.output_repo_dir)
+                        
+                        zip_path = os.path.join(
+                            safe_output_dir,
+                            f"{st.session_state.paper_name}_code.zip"
                         )
+                        
+                        if st.button("📦 Prepare Download", use_container_width=True):
+                            with st.spinner("Creating zip file..."):
+                                create_zip_file(safe_repo_dir, zip_path)
+                                st.success("Zip file created!")
+                        
+                        if os.path.exists(zip_path):
+                            with open(zip_path, 'rb') as f:
+                                st.download_button(
+                                    label="⬇️ Download Code",
+                                    data=f,
+                                    file_name=f"{st.session_state.paper_name}_code.zip",
+                                    mime="application/zip",
+                                    use_container_width=True
+                                )
+                    except ValueError as e:
+                        st.error(f"Security error: {str(e)}")
         else:
             st.info("Upload a paper and generate code to see files here")
     
